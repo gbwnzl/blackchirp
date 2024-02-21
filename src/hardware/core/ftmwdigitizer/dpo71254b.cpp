@@ -571,7 +571,7 @@ void Dpo71254b::beginAcquisition()
 {
     if(d_enabledForExperiment)
     {
-        p_comm->writeCmd(QString(":UNLOCK ALL;:DISPLAY:WAVEFORM OFF\n"));
+        p_comm->writeCmd(QString(":LOCK ALL;:DISPLAY:WAVEFORM OFF\n"));
         if(p_socket->bytesAvailable())
             p_socket->readAll();
 
