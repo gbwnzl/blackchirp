@@ -1,5 +1,6 @@
 #include "m8195a.h"
 
+#include <QTimer>
 #include <math.h>
 
 M8195A::M8195A(QObject *parent) : AWG(BC::Key::m8195a,BC::Key::m8195aName,CommunicationProtocol::Tcp,parent)
@@ -81,6 +82,14 @@ bool M8195A::prepareForExperiment(Experiment &exp)
             exp.d_errorString = QString("Could not initialize trigger settings.");
             return false;
         }
+
+        // QByteArray resp = p_comm->queryCmd(QString(":ARM:TRIG:OPER?\n"));
+
+        // if(!resp.isEmpty())
+        // {
+        //     emit logMessage(QString("Resp not empty, it says %1.").arg(QString(resp)),LogHandler::Error);
+        //     return false;
+        // }
     }
     else
     {
@@ -222,8 +231,13 @@ void M8195A::endAcquisition()
 {
     if(d_enabledForExperiment)
     {
-        p_comm->writeCmd(QString(":OUTP1 0;:OUTP3 0;:OUTP4 0\n"));
-        p_comm->writeCmd(QString(":ABOR\n"));
+        QTimer::singleShot(500,[=](){
+            p_comm->writeCmd(QString(":OUTP1 0;:OUTP3 0;:OUTP4 0\n"));
+            p_comm->writeCmd(QString(":ABOR\n"));
+        });
+
+        // p_comm->writeCmd(QString(":OUTP1 0;:OUTP3 0;:OUTP4 0\n"));
+        // p_comm->writeCmd(QString(":ABOR\n"));
     }
 }
 

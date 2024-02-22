@@ -58,10 +58,13 @@ bool DSOv204A::prepareForExperiment(Experiment &exp)
     if(!scopeCommand(QString("*RST;:SYSTEM:HEADER OFF")))
         return false;
 
-    if(!scopeCommand(QString(":DISPLAY:MAIN OFF")))
+    if(!scopeCommand(QString(":CHANNEL1:DISPLAY OFF;:CHANNEL2:DISPLAY OFF;:CHANNEL3:DISPLAY OFF;:CHANNEL4:DISPLAY OFF")))
         return false;
 
     if(!scopeCommand(QString(":CHANNEL%1:DISPLAY ON").arg(config.d_fidChannel)))
+        return false;
+
+    if(!scopeCommand(QString(":DISPLAY:MAIN OFF")))
         return false;
 
     if(!scopeCommand(QString(":CHANNEL%1:INPUT DC50").arg(config.d_fidChannel)))
@@ -174,7 +177,8 @@ bool DSOv204A::prepareForExperiment(Experiment &exp)
     if(!scopeCommand(QString(":ACQUIRE:SRATE:ANALOG:AUTO OFF")))
         return false;
 
-    if(!scopeCommand(QString(":ACQUIRE:SRATE:ANALOG %1").arg(QString::number(config.d_sampleRate,'g',2))))
+    if(!scopeCommand(QString(":ACQUIRE:SRATE:ANALOG %1").arg(QString::number(config.d_sampleRate,'e',3))))
+    // if(!scopeCommand(QString(":ACQUIRE:SRATE:ANALOG %1").arg(config.d_sampleRate)))
         return false;
 
     if(!scopeCommand(QString(":ACQUIRE:POINTS:AUTO OFF")))
@@ -362,6 +366,7 @@ void DSOv204A::endAcquisition()
         disconnect(p_socket,&QTcpSocket::readyRead,this,&DSOv204A::readWaveform);
         disconnect(p_socket, &QTcpSocket::readyRead, this, &DSOv204A::retrieveData);
 //        p_queryTimer->stop();
+
         p_comm->writeCmd(QString(":STOP\n"));
         p_comm->writeCmd(QString("*CLS\n"));
         p_comm->writeCmd(QString(":SYSTEM:GUI ON\n"));
