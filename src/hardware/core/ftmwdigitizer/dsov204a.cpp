@@ -459,6 +459,11 @@ void DSOv204A::readWaveform()
 
 void DSOv204A::retrieveData()
 {
+    if(!d_acquiring)
+    {
+        return;
+    }
+
     qint64 bytes = d_bytesPerPoint*d_recordLength*d_numRecords;
 
     if(p_socket->bytesAvailable() < bytes+2)
