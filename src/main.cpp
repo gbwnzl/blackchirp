@@ -30,8 +30,8 @@ int main(int argc, char *argv[])
 
     //QSettings information
     QApplication::setApplicationName(appName);
-    QApplication::setOrganizationDomain(QString("crabtreelab.ucdavis.edu"));
-    QApplication::setOrganizationName(QString("CrabtreeLab"));
+    QApplication::setOrganizationDomain(QString("mcguirelab.mit.edu"));
+    QApplication::setOrganizationName(QString("McGuireLab"));
 
     SettingsStorage s;
     auto f = s.get(BC::Key::appFont,QFont(QString("sans-serif"),8));
