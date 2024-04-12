@@ -141,7 +141,7 @@ public:
         QIcon auxIcon;
         auxIcon.addFile(QString::fromUtf8(":/icons/dataplots.png"), QSize(), QIcon::Normal, QIcon::Off);
         QIcon rollIcon;
-        rollIcon.addFile(QString(":/icons/view-media-visualization.svg"), QSize(), QIcon::Normal, QIcon::Off);
+        rollIcon.addFile(QString(":/icons/view-media-visualization.png"), QSize(), QIcon::Normal, QIcon::Off);
         QIcon icon7;
         icon7.addFile(QString::fromUtf8(":/icons/num.png"), QSize(), QIcon::Normal, QIcon::Off);
         QIcon icon8;
@@ -241,7 +241,7 @@ public:
         rollingPlotButton->setPopupMode(QToolButton::InstantPopup);
 
         QIcon settingsIcon;
-        settingsIcon.addFile(QString(":/icons/menu.svg"),QSize(), QIcon::Normal, QIcon::Off);
+        settingsIcon.addFile(QString(":/icons/menu.png"),QSize(), QIcon::Normal, QIcon::Off);
         settingsButton = new QToolButton(MainWindow);
         settingsButton->setIcon(settingsIcon);
         settingsButton->setText("Settings");
@@ -250,12 +250,12 @@ public:
         settingsButton->setPopupMode(QToolButton::InstantPopup);
 
         QIcon fontIcon;
-        fontIcon.addFile(QString(":/icons/font.svg"),QSize(), QIcon::Normal, QIcon::Off);
+        fontIcon.addFile(QString(":/icons/font.png"),QSize(), QIcon::Normal, QIcon::Off);
         fontAction = new QAction("Application Font");
         fontAction->setIcon(fontIcon);
 
         QIcon saveIcon;
-        saveIcon.addFile(QString(":/icons/save-as.svg"),QSize(), QIcon::Normal, QIcon::Off);
+        saveIcon.addFile(QString(":/icons/save-as.png"),QSize(), QIcon::Normal, QIcon::Off);
         savePathAction = new QAction("Data Storage");
         savePathAction->setIcon(saveIcon);
 

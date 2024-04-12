@@ -41,16 +41,16 @@
         <file>icons/bc_logo_med.png</file>
         <file>icons/bc_logo_large.png</file>
         <file>icons/motorscan.png</file>
-        <file>icons/labplot-xy-fourier-filter-curve.svg</file>
-        <file>icons/labplot-xy-fourier-transform-curve.svg</file>
-        <file>icons/view-media-visualization.svg</file>
-        <file>icons/plot1.svg</file>
-        <file>icons/plot2.svg</file>
-        <file>icons/reset.svg</file>
-        <file>icons/averaging.svg</file>
-        <file>icons/peak-find.svg</file>
-        <file>icons/font.svg</file>
-        <file>icons/menu.svg</file>
-        <file>icons/save-as.svg</file>
+        <file>icons/labplot-xy-fourier-filter-curve.png</file>
+        <file>icons/labplot-xy-fourier-transform-curve.png</file>
+        <file>icons/view-media-visualization.png</file>
+        <file>icons/plot1.png</file>
+        <file>icons/plot2.png</file>
+        <file>icons/reset.png</file>
+        <file>icons/averaging.png</file>
+        <file>icons/peak-find.png</file>
+        <file>icons/font.png</file>
+        <file>icons/menu.png</file>
+        <file>icons/save-as.png</file>
     </qresource>
 </RCC>
