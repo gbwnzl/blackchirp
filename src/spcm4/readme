@@ -1,0 +1,116 @@
+Installation of spcm linux driver for Spectrum M4i, M4x, M2p and M5i series
+---------------------------------------------------------
+(c) Spectrum GmbH
+    Ahrensfelder Weg 13-17
+    22927 Grosshansdorf
+    Germany
+    www.spectrum-instrumention.com
+---------------------------------------------------------
+support can be requested under support@spec.de
+---------------------------------------------------------
+
+
+This driver supports Linux distributions based on kernel 2.4 up to 6.x
+Systems with single processor as well as SMP systems are supported, both
+32 bit and 64 bit systems. The driver library supports the c and c++
+standard library version 6 (/usr/lib/libstdc++.so.6)
+
+The driver has been tested by Spectrum on all distributions for which we
+deliver pre-compiled kernel modules.
+See https://spectrum-instrumentation.com/en/supported-linux-distributions
+for a list of pre-compiled modules.
+On top of this the driver is running on much more distributions installed by
+customers.
+
+However Spectrum can give no guarantee that each installed Linux system in
+the world matching the above specification is running properly.
+
+If you encounter any problems with the installation please feel free to
+contact our support team under the above mentioned email. In case of support
+need please give the following details:
+- distribution you use (e.g. Ubuntu 22.04 64 Bit)
+- exact kernel version (cat /proc/version)
+- driver version you use (kernel module version and library version)
+- error description or compiler output
+
+
+
+Delivery of driver sources
+--------------------------
+The driver sources are only available for existing customers on special
+request. The driver sources are not part of the standard delivery.
+
+The driver source package contains only the sources of the kernel module,
+not the sources of the library.
+
+Please do the following steps for compilation and installation of the
+kernel driver module:
+
+
+
+1. Login as root
+
+It is necessary to have the root privileges for installing a driver.
+
+
+
+2. Call the compile script make_spcm4_linux_kerneldrv.sh
+
+This script requires "bash" to be installed on the system.
+If you get a error message like "/bin/bash: bad interpreter" then most likely
+bash is missing on your system.
+
+The script will examine the type of system you use and compile the
+kernel with the correct settings. If using a kernel 2.4 the makefile
+expects two symbolic links in your system:
+
+/usr/src/linux pointing to the correct kernel source directory
+/usr/src/linux/.config pointing to the currently used kernel configuration
+
+The compile script will then automatically install the newly compiled
+kernel driver module into the kernel module path of the current kernel
+(/lib/modules/$(uname -r)/kernel/drivers/) and will load the module.
+
+After a reboot the kernel driver module will be loaded automatically.
+If you want to unload it manually use "/sbin/modprobe -r spcm4".
+To manually load the module use "/sbin/modprobe spcm4".
+You need root priviliges to load or unload a kernel driver module.
+
+!!! Some systems use a technique called "Kernel lockdown". Those systems won't load an unsigned
+!!! 3rd party kernel module like ours.
+!!! To disable kernel lockdown, disable "Secure Boot" in UEFI/BIOS.
+
+
+3. Updating the kernel driver module
+
+Normally the kernel driver source only changes to adjust to new kernel versions.
+So most of the time you do not need to update the kernel driver as most
+changes are made in the user-space library which is available for download from here:
+https://spectrum-instrumentation.com/en/downloads/drivers
+On that page select your card, then select "LINUX Drivers + Software", and
+download the "Linux Driver Library" package.
+
+However, if you do need an updated kernel source package you can download it
+from our website:
+https://spectrum-instrumentation.com/download_files/spcm_driver_examples/Linux_Driver_Source_M2PM4M5.php
+
+
+4. Get first driver info
+
+After the driver has been loaded sucessfully some information about the
+installed boards can be found in the /proc/spcm4_cards file. Some
+basic information is listed for every card.
+
+Type "cat /proc/spcm4_cards" to see the card and driver information.
+
+
+5. Start programming
+
+Please add the library spcm_linux to your projects to have access to the
+driver functions. Using a makefile this is done with:
+
+LIBS += -lspcm_linux
+
+You may start with the examples to see how the card is accessed under Linux.
+The examples are found in the spcm_examples/c_cpp directory.
+

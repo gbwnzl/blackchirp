@@ -1,0 +1,10 @@
+/home/spectroscopist/spcm4/m4i_krnl_linux/spcm_linux_main.o
+/home/spectroscopist/spcm4/m4i_krnl_linux/spcm_linux_card.o
+/home/spectroscopist/spcm4/m4i_krnl_linux/spcm_linux_isr.o
+/home/spectroscopist/spcm4/m4i_krnl_linux/spcm_linux_debug.o
+/home/spectroscopist/spcm4/m4i_krnl_linux/../m4i_krnl_common/sglistmem.o
+/home/spectroscopist/spcm4/m4i_krnl_linux/../m4i_krnl_common/nwdcore.o
+/home/spectroscopist/spcm4/m4i_krnl_linux/../m4i_krnl_common/dma-nwc.o
+/home/spectroscopist/spcm4/m4i_krnl_linux/../m4i_krnl_common/dma-xdma.o
+/home/spectroscopist/spcm4/m4i_krnl_linux/../m4i_krnl_common/xdmacore.o
+/home/spectroscopist/spcm4/m4i_krnl_linux/../m2i_tools/spcm_eeprom_codes.o

@@ -1,0 +1,1 @@
+savedcmd_/home/spectroscopist/spcm4/m4i_krnl_linux/Module.symvers :=  scripts/mod/modpost -M -m -a      -o /home/spectroscopist/spcm4/m4i_krnl_linux/Module.symvers -T /home/spectroscopist/spcm4/m4i_krnl_linux/modules.order -i Module.symvers -e 

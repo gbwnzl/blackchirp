@@ -1,0 +1,44 @@
+# Makefile for Spectrum drivers for all kernel versions 2.4.x
+#
+# we expect a symbolic link /usr/src/linux that points to the correct kernel source directory
+# we expect a symbolic link /usr/src/linux/.config that points to the currently used kernel configuration
+#
+
+KERNELDIR = /lib/modules/$(shell uname -r)/build
+
+# store linux node name to have it for the preprocessor available
+NODENAME = $(shell uname -n)
+
+INCLUDEDIR = $(KERNELDIR)/include
+
+CFLAGS = -D__KERNEL__ -DMODULE -O2 -Wall -I$(INCLUDEDIR) -D$(NODENAME)
+CFLAGS += -include $(INCLUDEDIR)/linux/modversions.h
+
+include $(KERNELDIR)/.config
+
+ifdef CONFIG_SMP
+  CFLAGS += -D__SMP__ -DSMP
+endif
+
+OBJS = spcm4.o
+
+
+all: $(OBJS)
+
+$(OBJS):	spcm_linux_main.o\
+			spcm_linux_card.o\
+			spcm_linux_isr.o\
+			spcm_linux_debug.o\
+            ../m4i_krnl_common/sglistmem.o \
+            ../m4i_krnl_common/nwdcore.o \
+            ../m4i_krnl_common/dma-nwc.o \
+            ../m4i_krnl_common/dma-xdma.o \
+			../m2i_tools/spcm_eeprom_codes.o
+			$(LD) -r $^ -o $@
+
+install:
+
+clean:
+	rm -rf *.o *~ core .depend .*.cmd *.ko *.mod.c .tmp_versions *.symvers *.order *.markers *.mod
+	rm -f ../m2i_tools/*.o ../m2i_tools/.*.cmd
+	rm -f ../m4i_krnl_common/*.o ../m4i_krnl_common/.*.cmd

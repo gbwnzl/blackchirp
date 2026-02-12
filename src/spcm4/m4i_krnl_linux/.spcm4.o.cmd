@@ -1,0 +1,1 @@
+savedcmd_/home/spectroscopist/spcm4/m4i_krnl_linux/spcm4.o := ld -m elf_x86_64 -z noexecstack --no-warn-rwx-segments   -r -o /home/spectroscopist/spcm4/m4i_krnl_linux/spcm4.o @/home/spectroscopist/spcm4/m4i_krnl_linux/spcm4.mod 
