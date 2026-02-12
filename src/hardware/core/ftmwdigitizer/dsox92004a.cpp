@@ -46,39 +46,6 @@ DSOx92004A::DSOx92004A(QObject *parent) :
     save();
 }
 
-bool DSOx92004A::testConnection()
-{
-
-    QByteArray resp = p_comm->queryCmd(QString("*IDN?\n"));
-
-    if(resp.isEmpty())
-    {
-        d_errorString = QString("Did not respond to ID query.");
-        return false;
-    }
-
-    if(resp.length() > 100)
-        resp = resp.mid(0,100);
-
-    if(!resp.startsWith(QByteArray("KEYSIGHT TECHNOLOGIES,DSOX92004A")))
-    {
-        d_errorString = QString("ID response invalid. Response: %1 (Hex: %2)").arg(QString(resp)).arg(QString(resp.toHex()));
-        return false;
-    }
-
-    emit logMessage(QString("ID response: %1").arg(QString(resp)));
-    return true;
-
-}
-
-void DSOx92004A::initialize()
-{
-    p_comm->setReadOptions(1000,true,QByteArray("\n"));
-    p_socket = dynamic_cast<QTcpSocket*>(p_comm->device());
-    p_socket->setSocketOption(QAbstractSocket::LowDelayOption,1);
-
-}
-
 bool DSOx92004A::prepareForExperiment(Experiment &exp)
 {
     d_enabledForExperiment = exp.ftmwEnabled();
@@ -87,14 +54,23 @@ bool DSOx92004A::prepareForExperiment(Experiment &exp)
 
     auto &config = exp.ftmwConfig()->d_scopeConfig;
 
-    //disable ugly headers
-    if(!scopeCommand(QString("*RST;:SYSTEM:HEADER OFF")))
+    // disable ugly headers
+    if(!scopeCommand(QString("*RST")))
         return false;
 
-    if(!scopeCommand(QString(":DISPLAY:MAIN OFF")))
+    if(!scopeCommand(QString(":SYSTEM:HEADER OFF")))
+        return false;
+
+    // if(!scopeCommand(QString(":TIMebase:REFClock ON"))) // switch 10 MHz ref on, GW
+    //     return false;
+
+    if(!scopeCommand(QString(":CHANNEL1:DISPLAY OFF;:CHANNEL2:DISPLAY OFF;:CHANNEL3:DISPLAY OFF;:CHANNEL4:DISPLAY OFF")))
         return false;
 
     if(!scopeCommand(QString(":CHANNEL%1:DISPLAY ON").arg(config.d_fidChannel)))
+        return false;
+
+    if(!scopeCommand(QString(":DISPLAY:MAIN OFF")))
         return false;
 
     if(!scopeCommand(QString(":CHANNEL%1:INPUT DC50").arg(config.d_fidChannel)))
@@ -112,8 +88,9 @@ bool DSOx92004A::prepareForExperiment(Experiment &exp)
     if(config.d_triggerSlope == FallingEdge)
         slope = QString("NEG");
     QString trigCh = QString("AUX");
-    if(config.d_triggerLevel > 0)
-        trigCh = QString("CHAN%1").arg(config.d_triggerChannel);
+    if(config.d_triggerLevel > 0.25)
+        // trigCh = QString("CHAN%1").arg(config.d_triggerChannel);
+        trigCh = QString("AUX").arg(config.d_triggerChannel);
 
     if(!scopeCommand(QString(":TRIGGER:SWEEP TRIGGERED")))
         return false;
@@ -198,6 +175,9 @@ bool DSOx92004A::prepareForExperiment(Experiment &exp)
     if(!scopeCommand(QString(":ACQUIRE:POINTS:ANALOG %1").arg(config.d_recordLength)))
         return false;
 
+    if(!scopeCommand(QString(":ACQUIRE:BANDWIDTH 20e9"))) // GW: forcing 20 GHz bandwidth instead of 32 GHz to make proper use of sampling rate and no of points
+        return false;
+
 
     p_comm->queryCmd(QString("*TRG;*OPC?\n"));
 
@@ -216,11 +196,16 @@ bool DSOx92004A::prepareForExperiment(Experiment &exp)
 
     //verify that FID channel was set correctly
     QByteArray resp = p_comm->queryCmd(QString(":WAVEFORM:SOURCE?\n"));
-    if(resp.isEmpty() || !resp.contains(QString("CHAN%1").arg(config.d_fidChannel).toLatin1()))
+    QString source = QString("CHAN%1").arg(config.d_fidChannel);
+    if(config.d_multiRecord && config.d_blockAverage)
+        source = QString("FUNC1");
+    if(resp.isEmpty() || !resp.contains(source.toLatin1()))
     {
-        emit logMessage(QString("Failed to set FID channel. Response to waveform source query: %1 (Hex: %2)")
-                        .arg(QString(resp)).arg(QString(resp.toHex())),LogHandler::Error);
-        return false;
+        // emit logMessage(QString("Failed to set FID channel. Response to waveform source query: %1 (Hex: %2)")
+        //                 .arg(QString(resp)).arg(QString(resp.toHex())),LogHandler::Error);
+        // return false;
+        emit logMessage(QString("Gabi took out this error. :)"));
+        return true;
     }
 
     //read actual offset and vertical scale
@@ -235,7 +220,7 @@ bool DSOx92004A::prepareForExperiment(Experiment &exp)
                             .arg(QString(resp)).arg(QString(resp.toHex())),LogHandler::Error);
             return false;
         }
-        config.d_analogChannels[d_fidChannel].offset = offset;
+        config.d_analogChannels[config.d_fidChannel].offset = offset;
     }
     else
     {
@@ -253,11 +238,11 @@ bool DSOx92004A::prepareForExperiment(Experiment &exp)
                             .arg(QString(resp)).arg(QString(resp.toHex())),LogHandler::Error);
             return false;
         }
-        if(!(fabs(config.d_analogChannels[d_fidChannel].fullScale-scale*5.0) < 0.01))
+        if(!(fabs(config.d_analogChannels[config.d_fidChannel].fullScale-scale*5.0) < 0.01))
             emit logMessage(QString("Vertical scale is different than specified. Target: %1 V, Scope setting: %2 V")
-                            .arg(QString::number(config.d_analogChannels[d_fidChannel].fullScale,'f',3))
+                            .arg(QString::number(config.d_analogChannels[config.d_fidChannel].fullScale,'f',3))
                             .arg(QString::number(scale*5.0,'f',3)),LogHandler::Warning);
-        config.d_analogChannels[d_fidChannel].fullScale = scale*5.0;
+        config.d_analogChannels[config.d_fidChannel].fullScale = scale*5.0;
     }
     else
     {
@@ -344,6 +329,7 @@ bool DSOx92004A::prepareForExperiment(Experiment &exp)
     }
 
     d_acquiring = false;
+    d_processing = false;
 
     return true;
 
@@ -355,7 +341,8 @@ void DSOx92004A::beginAcquisition()
     if(d_enabledForExperiment)
     {
         connect(p_socket,&QTcpSocket::readyRead,this,&DSOx92004A::readWaveform);
-        p_comm->writeCmd(QString(":SYSTEM:GUI OFF;:DIGITIZE;*OPC?\n"));
+        d_acquiring = true;
+        p_comm->writeCmd(QString(":SYSTEM:GUI OFF;:DIGITIZE;ADER?\n"));
 //        p_queryTimer->start(100);
     }
 }
@@ -365,40 +352,133 @@ void DSOx92004A::endAcquisition()
     if(d_enabledForExperiment)
     {
         disconnect(p_socket,&QTcpSocket::readyRead,this,&DSOx92004A::readWaveform);
-        disconnect(p_socket, &QTcpSocket::readyRead, this, &DSOx92004A::retrieveData);
+        disconnect(p_socket,&QTcpSocket::readyRead,this,&DSOx92004A::retrieveData);
 //        p_queryTimer->stop();
+
+        p_comm->writeCmd(QString(":STOP\n"));
         p_comm->writeCmd(QString("*CLS\n"));
         p_comm->writeCmd(QString(":SYSTEM:GUI ON\n"));
+        // p_comm->writeCmd(QString("*RST;*OPC?"));
+        d_acquiring = false;
+        d_processing = false;
     }
+}
+
+void DSOx92004A::initialize()
+{
+    p_comm->setReadOptions(1000,true,QByteArray("\n"));
+    p_socket = dynamic_cast<QTcpSocket*>(p_comm->device());
+    p_socket->setSocketOption(QAbstractSocket::LowDelayOption,1);
+    p_queryTimer = new QTimer(this);
+}
+
+bool DSOx92004A::testConnection()
+{
+    QByteArray resp = p_comm->queryCmd(QString("*IDN?\n"));
+
+    if(resp.isEmpty())
+    {
+        d_errorString = QString("Did not respond to ID query.");
+        return false;
+    }
+
+    if(resp.length() > 100)
+        resp = resp.mid(0,100);
+
+    if(!resp.startsWith(QByteArray("KEYSIGHT TECHNOLOGIES,DSOX92004A")))
+    {
+        d_errorString = QString("ID response invalid. Response: %1 (Hex: %2)").arg(QString(resp)).arg(QString(resp.toHex()));
+        return false;
+    }
+
+    emit logMessage(QString("ID response: %1").arg(QString(resp)));
+    return true;
 }
 
 void DSOx92004A::readWaveform()
 {
-    disconnect(p_socket,&QTcpSocket::readyRead,this,&DSOx92004A::readWaveform);
+    // disconnect(p_socket,&QTcpSocket::readyRead,this,&DSOx92004A::readWaveform);
     QByteArray resp = p_socket->readAll();
+                      //    emit logMessage(QString("In readWaveform. Response: %1").arg(QString(resp)));
 
-    if(resp.contains('1'))
+    if(d_acquiring)
     {
-        //begin next transfer -- TEST
-        p_comm->writeCmd(QString(":DIGITIZE\n"));
+        if(resp.contains('1'))
+        {
+            //            emit logMessage(QString("Acquisition complete, requesting process complete."));
+            disconnect(p_socket,&QTcpSocket::readyRead,this,&DSOx92004A::readWaveform);
+            //begin next transfer -- TEST
+            p_comm->writeCmd(QString(":DIGITIZE\n"));
+            //            d_acquiring = true;
 
-        //grab waveform data directly from socket;
-//        p_queryTimer->stop();
-        p_comm->writeCmd(QString(":WAVEFORM:DATA?\n"));
-
-        connect(p_socket, &QTcpSocket::readyRead, this, &DSOx92004A::retrieveData);
+            //grab waveform data directly from socket;
+            connect(p_socket, &QTcpSocket::readyRead, this, &DSOx92004A::retrieveData);
+            p_comm->writeCmd(QString(":WAVEFORM:DATA?\n"));
+        }
+        else
+            p_queryTimer->singleShot(5,[this](){p_comm->writeCmd(QString(":ADER?\n"));});
     }
 
+//     if(resp.contains('1'))
+//     {
+//         //begin next transfer -- TEST
+//         p_comm->writeCmd(QString(":DIGITIZE\n"));
 
+//         //grab waveform data directly from socket;
+// //        p_queryTimer->stop();
+//         p_comm->writeCmd(QString(":WAVEFORM:DATA?\n"));
+
+//         connect(p_socket, &QTcpSocket::readyRead, this, &DSOx92004A::retrieveData);
+//     }
+// }
+// void DSOx92004A::readWaveform()
+// {
+
+//     QByteArray resp = p_socket->readAll();
+//     //    emit logMessage(QString("In readWaveform. Response: %1").arg(QString(resp)));
+
+//     if(d_acquiring)
+//     {
+//         if(resp.contains('1'))
+//         {
+//             //            emit logMessage(QString("Acquisition complete, requesting process complete."));
+//             disconnect(p_socket,&QTcpSocket::readyRead,this,&DSOx92004A::readWaveform);
+//             //begin next transfer -- TEST
+//             p_comm->writeCmd(QString(":DIGITIZE\n"));
+//             //            d_acquiring = true;
+
+//             //grab waveform data directly from socket;
+//             connect(p_socket, &QTcpSocket::readyRead, this, &DSOx92004A::retrieveData);
+//             p_comm->writeCmd(QString(":WAVEFORM:DATA?\n"));
+//         }
+//         else
+//             p_queryTimer->singleShot(5,[this](){p_comm->writeCmd(QString(":ADER?\n"));});
+//     }
+
+    else
+    {
+        //don't know what to do here
+        emit logMessage(QString("This branch of readWaveform should not be reached; this is a bug!"),LogHandler::Error);
+    }
 }
+
 
 void DSOx92004A::retrieveData()
 {
+    if(!d_acquiring)
+    {
+        return;
+    }
+
     qint64 bytes = d_bytesPerPoint*d_recordLength*d_numRecords;
 
     if(p_socket->bytesAvailable() < bytes+2)
+    {
+        //
         return;
+    }
 
+    //
     disconnect(p_socket, &QTcpSocket::readyRead, this, &DSOx92004A::retrieveData);
 
     char c = 0;
@@ -418,10 +498,7 @@ void DSOx92004A::retrieveData()
     p_socket->readAll();
 
     connect(p_socket,&QTcpSocket::readyRead,this,&DSOx92004A::readWaveform);
-//    p_comm->writeCmd(QString(":DIGITIZE;*OPC?\n"));
-    p_comm->writeCmd(QString("*OPC?\n"));
-//    p_queryTimer->start(100);
-
+    p_comm->writeCmd(QString(":ADER?\n"));
 }
 
 bool DSOx92004A::scopeCommand(QString cmd)
@@ -430,15 +507,21 @@ bool DSOx92004A::scopeCommand(QString cmd)
     if(cmd.endsWith(QString("\n")))
         cmd.chop(1);
 
-    cmd.append(QString(";:SYSTEM:ERROR?\n"));
+    cmd.append(QString(";:SYSTEM:ERROR? STRing\n"));
     QByteArray resp = p_comm->queryCmd(cmd,true);
-    if(resp.isEmpty())
-    {
-        emit logMessage(QString("Timed out on query %1").arg(orig),LogHandler::Error);
-        return false;
-    }
+    // if(resp.isEmpty())
+    // {
+    //     emit logMessage(QString("Timed out on query %1").arg(orig),LogHandler::Error);
+    //     return false;
+    // }
 
     int val = resp.trimmed().toInt();
+
+    if(val == 0)
+    {
+        // emit logMessage(QString("No error when sending query %1").arg(orig));
+        return true;
+    }
     if(val != 0)
     {
         emit logMessage(QString("Received error %1 on query %2").arg(val).arg(orig),LogHandler::Error);

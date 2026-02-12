@@ -29,6 +29,13 @@ Mks946::Mks946(QObject *parent) :
 
 bool Mks946::fcTestConnection()
 {
+    //GW
+    if(!p_comm->bcTestConnection())
+    {
+        emit logMessage(QString("Cannot test connection."),LogHandler::Error);
+        return false;
+    }
+
     QByteArray resp = mksQuery(QString("MD?"));
     if(!resp.contains(QByteArray("946")))
     {
@@ -82,7 +89,8 @@ void Mks946::hwSetFlowSetpoint(const int ch, const double val)
         }
     }
 
-    if(!mksWrite(QString("RRQ%1!%2").arg(ch+get(offset,1)).arg(val,0,'E',2,QLatin1Char(' '))))
+    double val2 = val/2.0;
+    if(!mksWrite(QString("RRQ%1!%2").arg(ch+get(offset,1)).arg(val2,0,'E',2,QLatin1Char(' '))))
     {
         emit logMessage(d_errorString,LogHandler::Error);
         emit hardwareFailure();
@@ -90,7 +98,10 @@ void Mks946::hwSetFlowSetpoint(const int ch, const double val)
     }
 
     if(pidActive)
+    {
         hwSetPressureControlMode(true);
+        return readFlowSetpoint(ch);
+    }
 }
 
 void Mks946::hwSetPressureSetpoint(const double val)
@@ -150,7 +161,7 @@ double Mks946::hwReadFlowSetpoint(const int ch)
         return -1.0;
     }
 
-    return out;
+    return out*2.0;
 }
 
 double Mks946::hwReadPressureSetpoint()
@@ -222,66 +233,126 @@ double Mks946::hwReadPressure()
     return -1.0;
 }
 
+
+bool Mks946::ensurePidOff(QString *why)
+{
+    QByteArray q = mksQuery("PID?");
+    if (q.contains("OFF")) return true;
+    if (!mksWrite("PID!OFF")) {
+        // If the failure was 169, re-check; it can be a harmless “already off / not applicable”
+        if (d_errorString.contains("169")) {
+            QByteArray q2 = mksQuery("PID?");
+            if (q2.contains("OFF")) return true;
+            if (why) *why = "Controller rejected PID!OFF (169) but still reports PID ON.";
+            return false;
+        }
+        if (why) *why = "Controller rejected PID!OFF with: " + d_errorString;
+        return false;
+    }
+    // verify
+    QByteArray q3 = mksQuery("PID?");
+    return q3.contains("OFF");
+}
+
+bool Mks946::ensurePidOn(QString *why)
+{
+    QByteArray q = mksQuery("PID?");
+    if (q.contains("ON")) return true;
+    if (!mksWrite("PID!ON")) {
+        if (why) *why = "Controller rejected PID!ON with: " + d_errorString;
+        return false;
+    }
+    QByteArray q2 = mksQuery("PID?");
+    return q2.contains("ON");
+}
+
+
+// void Mks946::hwSetPressureControlMode(bool enabled)
+// {
+//     if(!isConnected())
+//     {
+//         emit logMessage(QString("Cannot set pressure control mode due to a previous communication failure. Reconnect and try again."),LogHandler::Error);
+//         return;
+//     }
+
+//     if(enabled)
+//     {
+//         //first ensure recipe 1 is active
+//         // if(!mksWrite(QString("RCP!1")))
+//         // {
+//         //     emit logMessage(d_errorString,LogHandler::Error);
+//         //     emit hardwareFailure();
+//         //     return;
+//         // }
+
+//         // if(!mksWrite(QString("RRCP!1")))
+//         // {
+//         //     emit logMessage(d_errorString,LogHandler::Error);
+//         //     emit hardwareFailure();
+//         //     return;
+//         // }
+
+//         QList<QString> chNames;
+//         chNames << QString("A1") << QString("A2") << QString("B1") << QString("B2") << QString("C1") << QString("C2");
+
+//         //ensure pressure sensor is set to control channel
+//         if(!mksWrite(QString("RPCH!%1").arg(chNames.at(get(pressureChannel,5)-1))))
+//         {
+//             emit logMessage(d_errorString,LogHandler::Error);
+//             emit hardwareFailure();
+//             return;
+//         }
+
+//         if(!mksWrite(QString("RDCH!Rat")))
+//         {
+//             emit logMessage(d_errorString,LogHandler::Error);
+//             emit hardwareFailure();
+//             return;
+//         }
+
+//         if(!mksWrite(QString("PID!ON")))
+//         {
+//             if(!mksWrite(QString("PID!ON")))
+//             {
+//                 emit logMessage(d_errorString,LogHandler::Error);
+//                 emit hardwareFailure();
+//                 return;
+//             }
+//         }
+//     }
+//     else
+//     {
+//         if(!mksWrite(QString("PID!OFF")))
+//         {
+//             emit logMessage(d_errorString,LogHandler::Error);
+//             emit hardwareFailure();
+//             return;
+//         }
+//     }
+// }
+
 void Mks946::hwSetPressureControlMode(bool enabled)
 {
-    if(!isConnected())
-    {
-        emit logMessage(QString("Cannot set pressure control mode due to a previous communication failure. Reconnect and try again."),LogHandler::Error);
-        return;
-    }
+    if(!isConnected()) { emit logMessage("Cannot set pressure control mode due to a previous communication failure. Reconnect and try again.", LogHandler::Error); return; }
 
-    if(enabled)
-    {
-        //first ensure recipe 1 is active
-        if(!mksWrite(QString("RCP!1")))
-        {
-            emit logMessage(d_errorString,LogHandler::Error);
-            emit hardwareFailure();
-            return;
-        }
+    const int pch = get(pressureChannel,5);
+    const QList<QString> chNames{ "A1","A2","B1","B2","C1","C2" };
 
-        if(!mksWrite(QString("RRCP!1")))
-        {
-            emit logMessage(d_errorString,LogHandler::Error);
-            emit hardwareFailure();
-            return;
-        }
+    if (enabled) {
+        QString why;
+        if (!ensurePidOff(&why)) { emit logMessage(why, LogHandler::Error); emit hardwareFailure(); return; }
 
-        QList<QString> chNames;
-        chNames << QString("A1") << QString("A2") << QString("B1") << QString("B2") << QString("C1") << QString("C2");
+        if(!mksWrite(QString("RPCH!%1").arg(chNames.at(pch-1)))) { emit logMessage(d_errorString,LogHandler::Error); emit hardwareFailure(); return; }
+        if(!mksWrite("RDCH!Rat"))                                 { emit logMessage(d_errorString,LogHandler::Error); emit hardwareFailure(); return; }
 
-        //ensure pressure sensor is set to control channel
-        if(!mksWrite(QString("RPCH!%1").arg(chNames.at(get(pressureChannel,5)-1))))
-        {
-            emit logMessage(d_errorString,LogHandler::Error);
-            emit hardwareFailure();
-            return;
-        }
-
-        if(!mksWrite(QString("RDCH!Rat")))
-        {
-            emit logMessage(d_errorString,LogHandler::Error);
-            emit hardwareFailure();
-            return;
-        }
-
-        if(!mksWrite(QString("PID!ON")))
-        {
-            emit logMessage(d_errorString,LogHandler::Error);
-            emit hardwareFailure();
-            return;
-        }
-    }
-    else
-    {
-        if(!mksWrite(QString("PID!OFF")))
-        {
-            emit logMessage(d_errorString,LogHandler::Error);
-            emit hardwareFailure();
-            return;
-        }
+        if (!ensurePidOn(&why)) { emit logMessage(why, LogHandler::Error); emit hardwareFailure(); return; }
+    } else {
+        QString why;
+        if (!ensurePidOff(&why)) { emit logMessage(why, LogHandler::Error); emit hardwareFailure(); return; }
     }
 }
+
+
 
 int Mks946::hwReadPressureControlMode()
 {
@@ -319,18 +390,74 @@ void Mks946::poll()
 
 void Mks946::fcInitialize()
 {
-    p_comm->setReadOptions(100,true,QByteArray(";FF"));
+    p_comm->setReadOptions(400,true,QByteArray(";FF"));
+    // fcInitialize();
+    fcTestConnection();       //GW
 }
+
+// bool Mks946::mksWrite(QString cmd)
+// {
+//     bool pidActive = false;
+//     int a = get(address,253); // GW
+//     QByteArray resp = p_comm->queryCmd(QString("@%1%2;FF").arg(a,3,10,QChar('0')).arg(cmd));
+//     if(resp.contains(QByteArray("ACK")))
+//         return true;
+
+//     if(resp.contains(QByteArray("166")))
+//     {
+//         pidActive = true;
+//         if(!mksWrite(QString("PID!OFF")))
+//         {
+//             emit logMessage(QString("Could not disable PID mode to change pressure setpoint. Error: %1").arg(d_errorString));
+//             emit hardwareFailure();
+//             return false;	//GW
+//         }
+//         else
+//         {
+//             d_errorString = QString("Received invalid response to command %1. Response: %2").arg(cmd).arg(QString(resp));
+//             return false;
+//         }
+//     }
+//     return true;
+// }
 
 bool Mks946::mksWrite(QString cmd)
 {
-    QByteArray resp = p_comm->queryCmd(QString("@%1%2;FF").arg(get(address,253),3,10,QChar('0')).arg(cmd));
-    if(resp.contains(QByteArray("ACK")))
+    const int a = get(address,253);
+    auto send = [&](const QString& c) {
+        return p_comm->queryCmd(QString("@%1%2;FF").arg(a,3,10,QChar('0')).arg(c));
+    };
+
+    QByteArray resp = send(cmd);
+    if (resp.contains("ACK"))
         return true;
 
-    d_errorString = QString("Received invalid response to command %1. Response: %2").arg(cmd).arg(QString(resp));
+    // If PID is ON (166), turn it OFF and retry the original command
+    if (resp.contains("166")) {
+        QString why;
+        if (!ensurePidOff(&why)) {
+            d_errorString = why.isEmpty()
+            ? QString("Failed to turn PID OFF to run '%1'.").arg(cmd)
+            : why;
+            return false;
+        }
+        resp = send(cmd);
+        if (resp.contains("ACK"))
+            return true;
+    }
+
+    // Special case: if we were trying to turn PID OFF and got 169, recheck state
+    if (cmd == "PID!OFF" && resp.contains("169")) {
+        QByteArray q = send("PID?");
+        if (q.contains("OFF"))
+            return true;  // treat as already-off / benign
+    }
+
+    d_errorString = QString("Received invalid response to command %1. Response: %2")
+                        .arg(cmd, QString(resp));
     return false;
 }
+
 
 QByteArray Mks946::mksQuery(QString cmd)
 {

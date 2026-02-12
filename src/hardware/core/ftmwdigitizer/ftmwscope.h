@@ -69,6 +69,10 @@ typedef Dpo71254b FtmwScopeHardware;
 #include "dpo72004.h"
 class Dpo72004;
 typedef Dpo72004 FtmwScopeHardware;
+#elif BC_FTMWSCOPE == 9
+#include "m4i2230x8.h"
+class M4i2230x8;
+typedef M4i2230x8 FtmwScopeHardware;
 #endif
 
 

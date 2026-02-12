@@ -22,13 +22,13 @@ public slots:
     void beginAcquisition() override;
     void endAcquisition() override;
 
-    // FtmwScope interface
-    void readWaveform() override;
-
 protected:
-    bool testConnection() override;
     void initialize() override;
+    bool testConnection() override;
 
+    // FtmwScope interface
+public slots:
+    void readWaveform() override;
 
 private:
     QTcpSocket *p_socket;
@@ -36,7 +36,9 @@ private:
     void retrieveData();
     bool scopeCommand(QString cmd);
 
-    bool d_acquiring;
+    bool d_acquiring{false};
+    bool d_processing{false};
+
 };
 
 #endif // DSOX92004A_H

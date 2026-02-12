@@ -1,5 +1,6 @@
 #include "m8190.h"
 
+#include <QTimer>
 #include <math.h>
 
 M8190::M8190(QObject *parent) : AWG(BC::Key::m8190,BC::Key::m8190Name,CommunicationProtocol::Tcp,parent)
@@ -13,6 +14,7 @@ M8190::M8190(QObject *parent) : AWG(BC::Key::m8190,BC::Key::m8190Name,Communicat
     setDefault(BC::Key::AWG::rampOnly,false);
     setDefault(BC::Key::AWG::triggered,true);
 }
+
 
 
 bool M8190::testConnection()

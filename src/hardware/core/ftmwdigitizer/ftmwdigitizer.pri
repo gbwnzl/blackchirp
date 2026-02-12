@@ -2,11 +2,13 @@
 
 SOURCES += \
     $$PWD/ftmwdigitizerconfig.cpp \
-    $$PWD/ftmwscope.cpp
+    $$PWD/ftmwscope.cpp \
+    $$PWD/m4i2230x8.cpp
 
 HEADERS += \
     $$PWD/ftmwdigitizerconfig.h \
-    $$PWD/ftmwscope.h
+    $$PWD/ftmwscope.h \
+    $$PWD/m4i2230x8.h
 
 DEFINES += BC_FTMWSCOPE=$$FTMWSCOPE
 
@@ -51,7 +53,12 @@ equals(FTMWSCOPE,7) {
 	 HEADERS += $$PWD/dpo71254b.h
 }
 
-equals(FTMWSCOPE,8) {
-     SOURCES +=
-	 HEADERS +=
+# equals(FTMWSCOPE,8) {
+#      SOURCES += $$PWD/dpo72004.cpp
+# 	 HEADERS += $$PWD/dpo72004.h
+# }
+
+equals(FTMWSCOPE,9) {
+     HEADERS += $$PWD/m4i2230x8.h
+         SOURCES += $$PWD/m4i2230x8.cpp
 }

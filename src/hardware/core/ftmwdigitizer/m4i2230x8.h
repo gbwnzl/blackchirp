@@ -1,5 +1,5 @@
-#ifndef M412220x8_H
-#define M412220x8_H
+#ifndef M412230x8_H
+#define M412230x8_H
 
 #include <hardware/core/ftmwdigitizer/ftmwscope.h>
 
@@ -12,17 +12,17 @@
 #include <QTimer>
 
 namespace BC::Key::FtmwScope {
-static const QString m4i2220x8{"m4i2220x8"};
-static const QString m4i2220x8Name("Spectrum Instrumentation M4i.2230-x8 Digitizer");
+static const QString m4i2230x8{"m4i2230x8"};
+static const QString m4i2230x8Name("Spectrum Instrumentation M4i.2230-x8 Digitizer");
 }
 
 
-class M4i2220x8 : public FtmwScope
+class M4i2230x8 : public FtmwScope
 {
     Q_OBJECT
 public:
-    explicit M4i2220x8(QObject *parent = nullptr);
-    ~M4i2220x8();
+    explicit M4i2230x8(QObject *parent = nullptr);
+    ~M4i2230x8();
 
     // HardwareObject interface
 public slots:
@@ -48,4 +48,4 @@ private:
 
 };
 
-#endif // M412220x8_H
+#endif // M412230x8_H
